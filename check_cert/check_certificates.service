@@ -1,0 +1,11 @@
+[Unit]
+Description=Check various certificates
+StartLimitInterval=120
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+Restart=on-failure
+RestartSec=30
+ExecStart=/full/path/to/check_cert -f ~/.ctx_cert_expired expired.badssl.com
+

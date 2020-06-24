@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Ctx (or other) certificates for exipiry every 12 hours
+
+[Timer]
+OnActiveSec=1m
+OnUnitActiveSec=12h
+Unit=check_certificates.timer
+
+[Install]
+WantedBy=timers.target
+

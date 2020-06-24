@@ -1,0 +1,74 @@
+#!/usr/bin/env ruby
+require 'openssl'
+require 'net/http'
+require 'optionparser'
+require 'rainbow/refinement'
+using Rainbow
+
+flag_file = nil
+
+args = ARGV
+OptionParser.new do |opts|
+  opts.banner = "Usage: #{opts.program_name} [options] DOMAIN [DOMAIN [...]]"
+  opts.on('-fFILENAME', "empty file to be created on expired certificate, or removed on none expiring") do |file|
+    flag_file = File.expand_path(file)
+  end
+  opts.on_tail("-h", "--help", "Show this message") do
+    puts opts
+    exit
+  end
+end.parse!(args)
+
+uris = args
+
+class CertChecker
+  FAIL_LIMIT_IN_DAYS = 7
+  attr_reader :cert, :uri
+
+  def self.check(uri)
+    checker = new(uri)
+    checker.run.show
+    checker.expiry_in_days > FAIL_LIMIT_IN_DAYS
+  rescue OpenSSL::SSL::SSLError
+    false
+  end
+
+  def initialize(uri)
+    @uri = uri
+  end
+
+  def run
+    http = Net::HTTP.new(uri, 443)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    http.open_timeout = 5
+    http.read_timeout = 5
+    http.ssl_timeout  = 5
+    http.start do |h|
+      @cert = h.peer_cert
+    end
+    self
+  end
+
+  def expiry_in_days
+    ((cert.not_after - Time.now) / 24 / 3600).floor
+  end
+
+  def show
+    if expiry_in_days > 18
+      puts "#{uri} expires in #{expiry_in_days} days".green
+    elsif expiry_in_days > 5
+      puts "WARNING: #{uri} expires in #{expiry_in_days} days".orange
+    else
+      puts "DANGER: #{uri} expires in #{expiry_in_days} days".red
+    end
+  end
+end
+
+result = uris.map { |uri| CertChecker.check(uri) }
+return unless flag_file
+if result.all?
+  File.delete(flag_file) if File.exists?(flag_file)
+else
+  File.new(flag_file, 'w+')
+end
