@@ -22,7 +22,7 @@ end.parse!(args)
 uris = args
 
 class CertChecker
-  FAIL_LIMIT_IN_DAYS = 7
+  FAIL_LIMIT_IN_DAYS = 10
   attr_reader :cert, :uri
 
   def self.check(uri)
@@ -58,7 +58,7 @@ class CertChecker
     if expiry_in_days > 18
       puts "#{uri} expires in #{expiry_in_days} days".green
     elsif expiry_in_days > 5
-      puts "WARNING: #{uri} expires in #{expiry_in_days} days".orange
+      puts "WARNING: #{uri} expires in #{expiry_in_days} days".red
     else
       puts "DANGER: #{uri} expires in #{expiry_in_days} days".red
     end
